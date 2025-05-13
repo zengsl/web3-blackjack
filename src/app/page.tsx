@@ -39,7 +39,7 @@ export default function Page() {
       method: 'POST',
       body: JSON.stringify({ action: 'hit' ,address}),
       headers: {
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jsonwebtoken')}`,
       },
     })
     const data = await response.json()
@@ -57,7 +57,7 @@ export default function Page() {
       method: 'POST',
       body: JSON.stringify({ action: 'stand' , address }),
       headers: {
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jsonwebtoken')}`,
       },
     })
     const data = await response.json()
@@ -97,6 +97,8 @@ export default function Page() {
       )
     })
     if (response.status === 200) {
+      const { jsonwebtoken} = await response.json()
+      localStorage.setItem('jsonwebtoken', jsonwebtoken)
       setIsSigned(true)
       console.log('Signature is valid')
     } else {

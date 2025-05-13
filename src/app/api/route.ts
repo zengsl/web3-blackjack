@@ -5,6 +5,7 @@ import { finished } from "stream";
 import { DynamoDBClient, PutItemCommand, GetItemCommand } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { verifyMessage } from 'viem'
+import jwt from 'jsonwebtoken'
 
 // 初始化 DynamoDB 客户端
 const client = new DynamoDBClient({
@@ -164,8 +165,10 @@ export async function POST(request: Request) {
       signature,
     })
     if (isValid) {
+      const token = jwt.sign({ address }, process.env.JWT_SECRET || '', { expiresIn: '1h' })
       return new Response(JSON.stringify({
         message: 'Valid signature',
+        jsonwebtoken: token
       }), {
         status: 200,
         headers: {
@@ -183,7 +186,21 @@ export async function POST(request: Request) {
       })
     }
   }
-  else if (action === 'hit') {
+
+  const token = request.headers.get('Authorization')?.split(' ')[1]
+  if (!token) {
+    return new Response(JSON.stringify({
+      message: 'Authorization token is required',
+    }), { status: 401 })
+  } 
+  const decode = jwt.verify(token, process.env.JWT_SECRET || '') as { address: string }
+  if(decode.address.toLocaleLowerCase() !== address.toLocaleLowerCase()) {
+    return new Response(JSON.stringify({
+      message: 'Invalid token',
+    }), { status: 401 })
+  }
+  
+  if (action === 'hit') {
     const [newCard, newDeck] = getRandomCard(gameState.deck!, 1)
     gameState.playerHand.push(newCard[0])
     gameState.deck = newDeck
